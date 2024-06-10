@@ -2,6 +2,8 @@
 
 DCS Organic Panic (OPN) is a script developed by me for Digital Combat Simulator (DCS) that enhances the AI behavior of ground vehicles when under attack. By integrating this script into your DCS missions, you can expect a more dynamic and realistic response from AI-controlled ground units, making your simulation experience more immersive and challenging.
 
+**[Script Release](https://github.com/lucaspevidor/dcs-opn/releases/tag/v0.84-beta)**
+
 Author: Lucas Pevidor
 
 ## Contents
@@ -54,8 +56,8 @@ This script offers several key features that enhance the AI behavior of ground v
 
 ## Example Missions
 
-- **[OPN Example Mission - Syria](/missions/OPN-Example-0_84_Syria.miz):** A sample mission that demonstrates the capabilities of the OPN script. This mission is set in the Syria map and includes a variety of ground units that showcase the script's features. To use this mission, download the file and load it in the DCS Mission Editor.
-- **[OPN Example Mission - Caucasus](/missions/OPN-Example-0_84_Caucasus.miz):** A sample mission that demonstrates the capabilities of the OPN script. This mission is set in the Caucasus map and includes a variety of ground units that showcase the script's features. To use this mission, download the file and load it in the DCS Mission Editor.
+- **[OPN Example Mission - Syria](https://github.com/lucaspevidor/dcs-opn/releases/download/v0.84-beta/OPN-Example-0_84_Syria.miz):** A sample mission that demonstrates the capabilities of the OPN script. This mission is set in the Syria map and includes a variety of ground units that showcase the script's features. To use this mission, download the file and load it in the DCS Mission Editor.
+- **[OPN Example Mission - Caucasus](https://github.com/lucaspevidor/dcs-opn/releases/download/v0.84-beta/OPN-Example-0_84_Caucasus.miz):** A sample mission that demonstrates the capabilities of the OPN script. This mission is set in the Caucasus map and includes a variety of ground units that showcase the script's features. To use this mission, download the file and load it in the DCS Mission Editor.
 
 ## Requirements
 
