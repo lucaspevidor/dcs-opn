@@ -4,6 +4,8 @@ DCS Organic Panic (OPN) is a script developed by me for Digital Combat Simulator
 
 **[Script Release](https://github.com/lucaspevidor/dcs-opn/releases/tag/v0.84-beta)**
 
+**[DCS Forum Topic](https://forum.dcs.world/topic/351172-dcs-organic-panic-opn-overhauling-ground-ai-behavior-while-under-attack/)**
+
 Author: Lucas Pevidor
 
 ## Contents
@@ -29,6 +31,7 @@ This script offers several key features that enhance the AI behavior of ground v
   - Being hit by a weapon.
   - Being close to a weapon impact.
   - Being close to a friendly unit being hit or destroyed.
+  - Losing hitpoints
 - The amount of stress added or removed depends on:
   - Unit type (tank, APC, IFV, light armored, air defense, cargo truck, transport truck or car)
   - Distance to the weapon impact.
