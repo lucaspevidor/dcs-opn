@@ -1,15 +1,15 @@
 opn = {}
 
 -- Main settings -- Change these to adjust the behavior of the script
-opn.debugMessages = false
+opn.debugMessages = true
 opn.manpadsSpawnMessage = false
 
 opn.controlGroupTag = "-OPN"
 opn.emptyControlGroupTag = "-OPNE"
 opn.fullControlGroupTag = "-OPNF"
 
-opn.vehicleEmptyChance = 0.3
-opn.manpadsSpawnChance = 0.07 -- 7% chance of spawning manpads from disabled vehicles
+opn.vehicleEmptyChance = 0.2
+opn.manpadsSpawnChance = 0.12 -- 7% chance of spawning manpads from disabled vehicles
 opn.vehicleDisabledLifePercent = 0.3 -- Life percent when vehicle is considered disabled
 opn.vehicleWontReturnLifePercent = 0.7 -- Vehicles with life percent lower than this won't return to the attack area after panicking
 
@@ -261,7 +261,7 @@ opn.ManpadsTemplate = {
 
 opn.panicTemplate = {
 	panicEnabled = true,
-	panicThreshold = 95,
+	panicThreshold = 115,
 	currentPanic = 0,
 	prevPanic = 0,
 	panicNeighbourKilledRate = 1.0,
@@ -529,7 +529,7 @@ function opn.SpawnPanickedSquad(group, vehicleGroup)
 		local randomFobTime = mist.random(30, 60)
 		mist.scheduleFunction(function ()
 			newGroup:getController():setOption(AI.Option.Ground.id.ROE, AI.Option.Ground.val.ROE.OPEN_FIRE)
-		end, {}, timer.getTime() + randomFobTime)
+		end, {}, timer.getTime() + randomFobTime / 2)
 		mist.scheduleFunction(opn.GoToFob, { group.groupName }, timer.getTime() + randomFobTime)
 
 		return newGroup
@@ -569,7 +569,7 @@ function opn.DismountTransport(groupName)
 
 		if (math.random() < opn.manpadsSpawnChance) then
 			unit = mist.utils.deepCopy(opn.ManpadsTemplate)
-			DebugMessage("Watch out! MANPADS disembarked from a vehicle!", 10, opn.manpadsSpawnMessage)
+			DebugMessage("Watch out! MANPADS will disembark from a vehicle!", 10, opn.manpadsSpawnMessage)
 		end
 
 		unit.x = leadPosition.x + mist.random(-5, 5)
@@ -638,191 +638,199 @@ function opn.TrackWeapon(params, time)
 end
 
 function opn.ProcessBehavior()
-	for groupName, group in pairs(opn.managedGroups) do
-		if mist.groupIsDead(groupName) == false then
-			leaderUnit = Unit.getByName(mist.getGroupData(groupName).units[1].unitName)
-			leaderController = leaderUnit:getController()
-			group.position = mist.utils.makeVec2(mist.getLeadPos(groupName))
-			if group.unitStatus == opn.unitStatus.ACTIVE then
-				group.activePosition = mist.getLeadPos(groupName)
-			end			
 
-			if group.crewAmount ~= 0 and group.unitStatus ~= opn.unitStatus.DISABLED then
+	local status, err = pcall(function()
+		for groupName, group in pairs(opn.managedGroups) do
+			if mist.groupIsDead(groupName) == false then
+				leaderUnit = Unit.getByName(mist.getGroupData(groupName).units[1].unitName)
+				leaderController = leaderUnit:getController()
+				group.position = mist.utils.makeVec2(mist.getLeadPos(groupName))
+				if group.unitStatus == opn.unitStatus.ACTIVE then
+					group.activePosition = mist.getLeadPos(groupName)
+				end			
 
-				-- ----------- Any to Disabled -------------
-				if opn.GetUnitLifePercent(leaderUnit) < opn.vehicleDisabledLifePercent then
-					group.unitStatus = opn.unitStatus.DISABLED				
-					opn.StopGroup(groupName)
-					DebugMessage("Group " .. groupName .. " has been disabled")
-					leaderController:setOption(AI.Option.Ground.id.ROE, AI.Option.Ground.val.ROE.WEAPON_HOLD)
-					DebugMessage("Crew amount before loss: " .. group.crewAmount)
-					group.crewAmount = mist.random(0, group.crewAmount) -- Simulate crew loss
-					DebugMessage("Crew amount after losses: " .. group.crewAmount)
-					mist.scheduleFunction(opn.DismountTransport, { groupName }, timer.getTime() + 6 + mist.random(0, 3))					
-				
-				-- ----------- Active to Dispersed -------------
-				elseif
-						group.unitStatus == opn.unitStatus.ACTIVE and
-						group.panic.currentPanic > group.panic.panicThreshold * 0.03 and
-						group.panic.currentPanic < group.panic.panicThreshold
-				then
-					group.unitStatus = opn.unitStatus.DISPERSED
-					group.statusInitTime = timer.getTime()
-					opn.ResetDestination(groupName)
-					mist.scheduleFunction(opn.GoToRandom, { groupName, 50, 100, 20 }, timer.getTime() + mist.random(3, 15))
-					DebugMessage(groupName .. " has been dispersed")
-				-- ----------- Dispersed to Active -------------
-				elseif
-						group.unitStatus == opn.unitStatus.DISPERSED and
-						group.panic.currentPanic <= 0
-				then
-					group.unitStatus = opn.unitStatus.ACTIVE				
-					DebugMessage(groupName .. " is active again")
-					if (mist.utils.get2DDist(group.position, group.activePosition) > 300) then
+				if group.crewAmount ~= 0 and group.unitStatus ~= opn.unitStatus.DISABLED then
+
+					-- ----------- Any to Disabled -------------
+					if opn.GetUnitLifePercent(leaderUnit) < opn.vehicleDisabledLifePercent then
+						group.unitStatus = opn.unitStatus.DISABLED				
+						opn.StopGroup(groupName)
+						DebugMessage("Group " .. groupName .. " has been disabled")
+						leaderController:setOption(AI.Option.Ground.id.ROE, AI.Option.Ground.val.ROE.WEAPON_HOLD)
+						DebugMessage("Crew amount before loss: " .. group.crewAmount, 10)
+						group.crewAmount = mist.random(0, group.crewAmount) -- Simulate crew loss
+						DebugMessage("Crew amount after losses: " .. group.crewAmount, 10)
+						mist.scheduleFunction(opn.DismountTransport, { groupName }, timer.getTime() + 6 + mist.random(0, 3))					
+					
+					-- ----------- Active to Dispersed -------------
+					elseif
+							group.unitStatus == opn.unitStatus.ACTIVE and
+							group.panic.currentPanic > group.panic.panicThreshold * 0.03 and
+							group.panic.currentPanic < group.panic.panicThreshold
+					then
+						group.unitStatus = opn.unitStatus.DISPERSED
+						group.statusInitTime = timer.getTime()
 						opn.ResetDestination(groupName)
+						mist.scheduleFunction(opn.GoToRandom, { groupName, 50, 100, 20 }, timer.getTime() + mist.random(3, 15))
+						DebugMessage(groupName .. " has been dispersed")
+					-- ----------- Dispersed to Active -------------
+					elseif
+							group.unitStatus == opn.unitStatus.DISPERSED and
+							group.panic.currentPanic <= 0
+					then
+						group.unitStatus = opn.unitStatus.ACTIVE				
+						DebugMessage(groupName .. " is active again")
+						if (mist.utils.get2DDist(group.position, group.activePosition) > 300) then
+							opn.ResetDestination(groupName)
+							local lastActivePosition = {
+								point = group.activePosition,
+								radius = 1,
+							}
+							mist.groupToPoint(groupName, lastActivePosition, nil, nil, 100, true)
+						end
+					-- ----------- Dispersed to Dispersed -------------
+					elseif
+							group.unitStatus == opn.unitStatus.DISPERSED and
+							group.panic.prevPanic + 10 * group.panic.panicDecreaseRate < group.panic.currentPanic and
+							group.panic.currentPanic < group.panic.panicThreshold
+					then
+						group.unitStatus = opn.unitStatus.DISPERSED
+						group.statusInitTime = timer.getTime()
+						opn.ResetDestination(groupName)
+						mist.scheduleFunction(opn.GoToRandom, { groupName, 20, 40, 20 }, timer.getTime() + mist.random(2, 5))
+						DebugMessage(groupName .. " has been dispersed")
+
+					-- ----------- Any to Panicked -------------
+					elseif
+							group.unitStatus ~= opn.unitStatus.PANICKED and
+							group.panic.currentPanic > group.panic.panicThreshold
+					then
+						group.unitStatus = opn.unitStatus.PANICKED
+						group.statusInitTime = timer.getTime()
+						opn.ResetDestination(groupName)
+						mist.scheduleFunction(opn.GoToRandom, { groupName, 400, 600, 25 }, timer.getTime() + mist.random(3, 8))
+						DebugMessage(groupName .. " has panicked")
+					-- ----------- Panicked to Panicked -------------
+					elseif
+							group.unitStatus == opn.unitStatus.PANICKED and
+							group.panic.prevPanic + 10 * group.panic.panicDecreaseRate < group.panic.currentPanic
+					then
+						group.statusInitTime = timer.getTime()
+						opn.ResetDestination(groupName)
+						mist.scheduleFunction(opn.GoToRandom, { groupName, 300, 400, 25 }, timer.getTime() + mist.random(1, 3))
+
+					-- ----------- Panicked to Hiding -------------
+					elseif
+							group.unitStatus == opn.unitStatus.PANICKED and
+							(
+								group.panic.currentPanic < group.panic.panicThreshold or
+								mist.utils.get2DDist(group.position, group.destination) < 50
+							)
+					then
+						group.panic.currentPanic = group.panic.panicThreshold - 1
+						group.unitStatus = opn.unitStatus.HIDING
+						group.statusInitTime = timer.getTime() + mist.random(0, 60)
+						group.statusRandomTime = mist.random(3, 10)
+						opn.StopGroup(groupName)
+						DebugMessage(groupName .. " has started hiding")
+
+					-- ----------- Hiding to retreating -------------
+					elseif
+							group.unitStatus == opn.unitStatus.HIDING and
+							timer.getTime() - group.statusInitTime > 15 + group.statusRandomTime and
+							group.panic.currentPanic < group.panic.panicThreshold * 0.9
+					then
+						group.unitStatus = opn.unitStatus.RETREATING
+						group.statusInitTime = timer.getTime()
+						group.statusRandomTime = mist.random(0, 50)
+						opn.ResetDestination(groupName)
+						mist.scheduleFunction(opn.GoToFob, { groupName, 80 }, timer.getTime() + mist.random(0, 5))
+						DebugMessage(groupName .. " has started retreating")		
+
+					-- --------- Retreating to Active -------------
+					elseif
+						group.unitStatus == opn.unitStatus.RETREATING and
+						timer.getTime() - group.statusInitTime > 250 + group.statusRandomTime and
+						mist.utils.get2DDist(group.position, group.destination) < 50 and
+						opn.GetUnitLifePercent(leaderUnit) <= opn.vehicleWontReturnLifePercent
+					then
+						group.unitStatus = opn.unitStatus.ACTIVE
+						group.statusInitTime = timer.getTime()
+						DebugMessage(groupName .. " won't return and is active")	
+
+					-- --------- Retreating to Returning -------------
+					elseif
+						group.unitStatus == opn.unitStatus.RETREATING and
+						timer.getTime() - group.statusInitTime > 250 + group.statusRandomTime and
+						mist.utils.get2DDist(group.position, group.destination) < 50 and
+						opn.GetUnitLifePercent(leaderUnit) > 0.7
+					then
 						local lastActivePosition = {
 							point = group.activePosition,
 							radius = 1,
 						}
-						mist.groupToPoint(groupName, lastActivePosition, nil, nil, 100, true)
+						mist.groupToPoint(groupName, lastActivePosition, nil, nil, 90, true)
+						group.destination.x = group.activePosition.x
+						group.destination.y = group.activePosition.z
+						group.unitStatus = opn.unitStatus.RETURNING
+						group.statusInitTime = timer.getTime()
+						DebugMessage(groupName .. " has started returning")				
+
+					-- ----------- Returning to Active -------------
+					elseif
+						group.unitStatus == opn.unitStatus.RETURNING and
+						mist.utils.get2DDist(group.position, group.activePosition) < 50
+					then
+						group.unitStatus = opn.unitStatus.ACTIVE
+						group.statusInitTime = timer.getTime()
+						DebugMessage(groupName .. " has returned to active")
 					end
-				-- ----------- Dispersed to Dispersed -------------
-				elseif
-						group.unitStatus == opn.unitStatus.DISPERSED and
-						group.panic.prevPanic + 10 * group.panic.panicDecreaseRate < group.panic.currentPanic and
-						group.panic.currentPanic < group.panic.panicThreshold
-				then
-					group.unitStatus = opn.unitStatus.DISPERSED
-					group.statusInitTime = timer.getTime()
-					opn.ResetDestination(groupName)
-					mist.scheduleFunction(opn.GoToRandom, { groupName, 20, 40, 20 }, timer.getTime() + mist.random(2, 5))
-					DebugMessage(groupName .. " has been dispersed")
 
-				-- ----------- Any to Panicked -------------
-				elseif
-						group.unitStatus ~= opn.unitStatus.PANICKED and
-						group.panic.currentPanic > group.panic.panicThreshold
-				then
-					group.unitStatus = opn.unitStatus.PANICKED
-					group.statusInitTime = timer.getTime()
-					opn.ResetDestination(groupName)
-					mist.scheduleFunction(opn.GoToRandom, { groupName, 400, 600, 25 }, timer.getTime() + mist.random(3, 8))
-					DebugMessage(groupName .. " has panicked")
-				-- ----------- Panicked to Panicked -------------
-				elseif
-						group.unitStatus == opn.unitStatus.PANICKED and
-						group.panic.prevPanic + 10 * group.panic.panicDecreaseRate < group.panic.currentPanic
-				then
-					group.statusInitTime = timer.getTime()
-					opn.ResetDestination(groupName)
-					mist.scheduleFunction(opn.GoToRandom, { groupName, 300, 400, 25 }, timer.getTime() + mist.random(1, 3))
-
-				-- ----------- Panicked to Hiding -------------
-				elseif
-						group.unitStatus == opn.unitStatus.PANICKED and
-						(
-							group.panic.currentPanic < group.panic.panicThreshold or
-							mist.utils.get2DDist(group.position, group.destination) < 50
-						)
-				then
-					group.panic.currentPanic = group.panic.panicThreshold - 1
-					group.unitStatus = opn.unitStatus.HIDING
-					group.statusInitTime = timer.getTime() + mist.random(0, 60)
-					group.statusRandomTime = mist.random(5, 10)
-					opn.StopGroup(groupName)
-					DebugMessage(groupName .. " has started hiding")
-
-				-- ----------- Hiding to retreating -------------
-				elseif
-						group.unitStatus == opn.unitStatus.HIDING and
-						timer.getTime() - group.statusInitTime > 15 + group.statusRandomTime and
-						group.panic.currentPanic < group.panic.panicThreshold * 0.8
-				then
-					group.unitStatus = opn.unitStatus.RETREATING
-					group.statusInitTime = timer.getTime()
-					group.statusRandomTime = mist.random(0, 50)
-					opn.ResetDestination(groupName)
-					mist.scheduleFunction(opn.GoToFob, { groupName, 80 }, timer.getTime() + mist.random(0, 5))
-					DebugMessage(groupName .. " has started retreating")		
-
-				-- --------- Retreating to Active -------------
-				elseif
-					group.unitStatus == opn.unitStatus.RETREATING and
-					timer.getTime() - group.statusInitTime > 250 + group.statusRandomTime and
-					mist.utils.get2DDist(group.position, group.destination) < 50 and
-					opn.GetUnitLifePercent(leaderUnit) <= opn.vehicleWontReturnLifePercent
-				then
-					group.unitStatus = opn.unitStatus.ACTIVE
-					group.statusInitTime = timer.getTime()
-					DebugMessage(groupName .. " won't return and is active")	
-
-				-- --------- Retreating to Returning -------------
-				elseif
-					group.unitStatus == opn.unitStatus.RETREATING and
-					timer.getTime() - group.statusInitTime > 250 + group.statusRandomTime and
-					mist.utils.get2DDist(group.position, group.destination) < 50 and
-					opn.GetUnitLifePercent(leaderUnit) > 0.7
-				then
-					local lastActivePosition = {
-						point = group.activePosition,
-						radius = 1,
-					}
-					mist.groupToPoint(groupName, lastActivePosition, nil, nil, 90, true)
-					group.destination.x = group.activePosition.x
-					group.destination.y = group.activePosition.z
-					group.unitStatus = opn.unitStatus.RETURNING
-					group.statusInitTime = timer.getTime()
-					DebugMessage(groupName .. " has started returning")				
-
-				-- ----------- Returning to Active -------------
-				elseif
-					group.unitStatus == opn.unitStatus.RETURNING and
-					mist.utils.get2DDist(group.position, group.activePosition) < 50
-				then
-					group.unitStatus = opn.unitStatus.ACTIVE
-					group.statusInitTime = timer.getTime()
-					DebugMessage(groupName .. " has returned to active")
-				end
-
-				-- ----------- If panic increased above threshold, cap to min max -----------
-				if 
-					group.panic.currentPanic > group.panic.panicThreshold and
-					group.panic.currentPanic > group.panic.prevPanic			
-				then
-					if group.panic.currentPanic < group.panic.panicThreshold + opn.minPanicTime * group.panic.panicDecreaseRate then
-						group.panic.currentPanic = 
-							group.panic.panicThreshold + opn.minPanicTime * group.panic.panicDecreaseRate + math.random() * 8
+					-- ----------- If panic increased above threshold, cap to min max -----------
+					if 
+						group.panic.currentPanic > group.panic.panicThreshold and
+						group.panic.currentPanic > group.panic.prevPanic			
+					then
+						if group.panic.currentPanic < group.panic.panicThreshold + opn.minPanicTime * group.panic.panicDecreaseRate then
+							group.panic.currentPanic = 
+								group.panic.panicThreshold + opn.minPanicTime * group.panic.panicDecreaseRate + math.random() * 8
+						end
+						if group.panic.currentPanic > group.panic.panicThreshold + opn.maxPanicTime * group.panic.panicDecreaseRate then
+							group.panic.currentPanic = 
+								group.panic.panicThreshold + opn.maxPanicTime * group.panic.panicDecreaseRate - math.random() * 5
+						end
 					end
-					if group.panic.currentPanic > group.panic.panicThreshold + opn.maxPanicTime * group.panic.panicDecreaseRate then
-						group.panic.currentPanic = 
-							group.panic.panicThreshold + opn.maxPanicTime * group.panic.panicDecreaseRate - math.random() * 5
+
+					-- ----------- Decrease panic over time -----------
+					group.panic.prevPanic = group.panic.currentPanic
+					if group.unitStatus == opn.unitStatus.PANICKED then
+						group.panic.currentPanic = group.panic.currentPanic - group.panic.panicDecreaseWhilePanickedRate
+					else
+						group.panic.currentPanic = group.panic.currentPanic - group.panic.panicDecreaseRate
 					end
-				end
+					if group.panic.currentPanic < 0 then
+						group.panic.currentPanic = 0
+					end
 
-				-- ----------- Decrease panic over time -----------
-				group.panic.prevPanic = group.panic.currentPanic
-				if group.unitStatus == opn.unitStatus.PANICKED then
-					group.panic.currentPanic = group.panic.currentPanic - group.panic.panicDecreaseWhilePanickedRate
-				else
-					group.panic.currentPanic = group.panic.currentPanic - group.panic.panicDecreaseRate
 				end
-				if group.panic.currentPanic < 0 then
-					group.panic.currentPanic = 0
-				end
+			end
 
+			if mist.groupIsDead(groupName) then			
+				-- ----------- ONFIRE to DEACTIVATED -------------
+				if group.crewAmount ~= 0 and group.unitStatus == opn.unitStatus.ONFIRE and group.crewStatus == opn.crewStatus.MOUNTED then				
+					group.crewStatus = opn.crewStatus.DISMOUNTED	
+					DebugMessage("Original crew amount: " .. group.crewAmount, 10)
+					group.crewAmount = mist.random(0, group.crewAmount) -- Simulate crew loss
+					DebugMessage("Crew amount after loss: " .. group.crewAmount, 10)
+					mist.scheduleFunction(opn.DismountTransport, { groupName }, timer.getTime() + 4 + mist.random(0, 3))
+				end
 			end
 		end
+	end)
 
-		if mist.groupIsDead(groupName) then			
-			-- ----------- ONFIRE to DEACTIVATED -------------
-			if group.crewAmount ~= 0 and group.unitStatus == opn.unitStatus.ONFIRE and group.crewStatus == opn.crewStatus.MOUNTED then				
-				group.crewStatus = opn.crewStatus.DISMOUNTED	
-				DebugMessage("Original crew amount: " .. group.crewAmount)
-				group.crewAmount = mist.random(0, group.crewAmount) -- Simulate crew loss
-				DebugMessage("Crew amount after loss: " .. group.crewAmount)
-				mist.scheduleFunction(opn.DismountTransport, { groupName }, timer.getTime() + 4 + mist.random(0, 3))
-			end
-		end
+	if not status then
+		env.error(string.format("DCS OPN: Error in ProcessBehavior: %s", err), false)
+		DebugMessage(string.format("DCS OPN: Error in ProcessBehavior: %s", err), 10, true)
 	end
 end
 
@@ -949,6 +957,38 @@ function opn.OnShotEvent(event)
 	timer.scheduleFunction(opn.TrackWeapon, params, timer.getTime() + 0.001)
 end
 
+function opn.OnShootingStartEvent(event)
+	local id = event.id
+	local time = event.time
+	local initiator = event.initiator
+	local target = event.target
+	local weaponName = event.weapon_name
+
+	local initiatorName = ''
+	if initiator then
+		initiatorName = initiator:getName()
+	end
+
+	local targetName = ''
+	if target then
+		targetName = target:getName()
+	end
+	DebugMessage("Shooting started by " .. initiatorName .. " at " .. targetName .. " with " .. weaponName, 5)
+end
+
+function opn.OnShootingEndEvent(event)
+	local id = event.id
+	local time = event.time
+	local initiator = event.initiator
+	local weaponName = event.weapon_name	
+
+	local initiatorName = ''
+	if initiator then
+		initiatorName = initiator:getName()
+	end
+	DebugMessage("Shooting ended by " .. initiatorName .. " with " .. weaponName, 5)
+end
+
 opn.EventHandler = {}
 function opn.EventHandler:onEvent(_dcsEvent)
 
@@ -963,6 +1003,10 @@ function opn.EventHandler:onEvent(_dcsEvent)
 			opn.OnKillEvent(_event)
 		elseif _event.id == world.event.S_EVENT_SHOT then
 			opn.OnShotEvent(_event)
+		-- elseif _event.id == world.event.S_EVENT_SHOOTING_START then
+		-- 	opn.OnShootingStartEvent(_event)
+		-- elseif _event.id == world.event.S_EVENT_SHOOTING_END then
+		-- 	opn.OnShootingEndEvent(_event)
 		end
 	end, _dcsEvent)
 
@@ -973,7 +1017,7 @@ function opn.EventHandler:onEvent(_dcsEvent)
 end
 
 function opn.ReportInitComplete()
-	DebugMessage("OPN - v0.84 loaded", 10, true)
+	DebugMessage("OPN - v0.85_preview loaded", 10, true)
 
 	local grpNum = 0
 	for _ in pairs(opn.managedGroups) do
