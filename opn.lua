@@ -1,7 +1,7 @@
 opn = {}
 
 -- Main settings -- Change these to adjust the behavior of the script
-opn.debugMessages = true
+opn.debugMessages = false
 opn.manpadsSpawnMessage = false
 
 opn.controlGroupTag = "-OPN"
@@ -9,7 +9,7 @@ opn.emptyControlGroupTag = "-OPNE"
 opn.fullControlGroupTag = "-OPNF"
 
 opn.vehicleEmptyChance = 0.2
-opn.manpadsSpawnChance = 0.12 -- 7% chance of spawning manpads from disabled vehicles
+opn.manpadsSpawnChance = 0.07 -- 7% chance of spawning manpads from disabled vehicles
 opn.vehicleDisabledLifePercent = 0.3 -- Life percent when vehicle is considered disabled
 opn.vehicleWontReturnLifePercent = 0.7 -- Vehicles with life percent lower than this won't return to the attack area after panicking
 
@@ -261,7 +261,7 @@ opn.ManpadsTemplate = {
 
 opn.panicTemplate = {
 	panicEnabled = true,
-	panicThreshold = 115,
+	panicThreshold = 95,
 	currentPanic = 0,
 	prevPanic = 0,
 	panicNeighbourKilledRate = 1.0,
