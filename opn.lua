@@ -15,11 +15,11 @@ opn.vehicleWontReturnLifePercent = 0.7 -- Vehicles with life percent lower than 
 
 opn.minPanicTime = 45
 opn.maxPanicTime = 90
-opn.minKillPanicDistance = 250 -- Distance for max panic increase
-opn.maxKillPanicDistance = 600 -- Distance for min panic increase
+opn.minKillPanicDistance = 250 -- Distance for min panic increase
+opn.maxKillPanicDistance = 600 -- Distance for max panic increase
 opn.panicIncreaseOnKill = 25
-opn.minWeaponCloseDistance = 50 -- Distance for max panic increase
-opn.maxWeaponCloseDistance = 300 -- Distance for min panic increase
+opn.minWeaponCloseDistance = 50 -- Distance for min panic increase
+opn.maxWeaponCloseDistance = 300 -- Distance for max panic increase
 opn.panicIncreaseOnCloseWeapon = 40
 opn.panicIncreaseOnWeaponHit = 30
 
@@ -1017,7 +1017,7 @@ function opn.EventHandler:onEvent(_dcsEvent)
 end
 
 function opn.ReportInitComplete()
-	DebugMessage("OPN - v0.85_preview loaded", 10, true)
+	DebugMessage("OPN - v0.85 loaded", 10, true)
 
 	local grpNum = 0
 	for _ in pairs(opn.managedGroups) do
