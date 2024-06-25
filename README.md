@@ -2,7 +2,7 @@
 
 DCS Organic Panic (OPN) is a script developed by me for Digital Combat Simulator (DCS) that enhances the AI behavior of ground vehicles when under attack. By integrating this script into your DCS missions, you can expect a more dynamic and realistic response from AI-controlled ground units, making your simulation experience more immersive and challenging.
 
-**[Download the script here <--](https://github.com/lucaspevidor/dcs-opn/blob/opn-dev/opn.lua)**
+**[Download the script here <--](https://github.com/lucaspevidor/dcs-opn/releases)**
 
 Remember to install [MIST](https://github.com/mrSkortch/MissionScriptingTools/releases) as well.
 
